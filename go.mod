@@ -1,4 +1,4 @@
-module github.com/sergiordob/mongodb
+module github.com/sergiordob/IFPB-Projeto-2024
 
 go 1.22.0
 
