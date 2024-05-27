@@ -3,7 +3,7 @@ package models
 import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
-//[]float64
+
 type Drugstore struct {
 	ID           primitive.ObjectID `bson:"_id"`
 	Nome         string             `bson:"nome"`
