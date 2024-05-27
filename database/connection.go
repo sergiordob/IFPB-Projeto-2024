@@ -10,7 +10,7 @@ import (
 )
 
 var DatabaseConnection *mongo.Client
-var Context context.Context
+//var Context context.Context
 
 func ConnectMongoDB() {
 	//Conexao com o Banco de Dados
@@ -18,13 +18,14 @@ func ConnectMongoDB() {
 	//String de Configuracao do MondoDBAtlas
 	uri := "mongodb+srv://root:root@buscafarma.xprmej7.mongodb.net/?retryWrites=true&w=majority&appName=BuscaFarma"
 
+	
 	//var cancel context.CancelFunc
 
 	//Contexto com timout
 	//Context, cancel = context.WithTimeout(context.Background(), 10*time.Second)
 
 	//Contexto sem cancelamento
-	Context = context.Background()
+	Context := context.Background()
 	//defer cancel()
 
 	//Configura a opções do cliente
