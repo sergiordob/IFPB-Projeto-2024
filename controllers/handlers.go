@@ -1,14 +1,16 @@
 package controllers
 
 import (
-	"context"
-	"fmt"
-	"log"
-	"net/http"
+    "context"
+    "fmt"
+    "net/http"
+    "log"
+	
+    "github.com/gorilla/mux"
+    "go.mongodb.org/mongo-driver/bson"
 
-	"github.com/sergiordob/IFPB-Projeto-2024/database"
-	"github.com/sergiordob/IFPB-Projeto-2024/database/models"
-	"go.mongodb.org/mongo-driver/bson"
+    "github.com/sergiordob/IFPB-Projeto-2024/database"
+    "github.com/sergiordob/IFPB-Projeto-2024/database/models"
 )
 
 func EndPoint01() http.HandlerFunc {
@@ -17,11 +19,8 @@ func EndPoint01() http.HandlerFunc {
         databaseHandler := database.DatabaseConnection.Database("farma")
         collection := databaseHandler.Collection("farma_full_collection")
 
-        // Filtra as farmacias por estado (UF) - Configurado para PB
-        filter := bson.M{"endereco.estado": "PB"}
-
-        // Encontra os documentos correspondentes
-        cursor, err := collection.Find(context.TODO(), filter)
+        // Encontra todos os documentos
+        cursor, err := collection.Find(context.TODO(), bson.M{})
         if err != nil {
             panic(err)
         }
@@ -33,13 +32,9 @@ func EndPoint01() http.HandlerFunc {
         // Itera sobre os resultados
         for cursor.Next(context.TODO()) {
             var drugstore models.Drugstore
-
-            // Decodifica o documento
             if err := cursor.Decode(&drugstore); err != nil {
                 panic(err)
             }
-
-            // Adiciona o documento à lista
             drugstores = append(drugstores, drugstore)
         }
 
@@ -60,41 +55,78 @@ func EndPoint01() http.HandlerFunc {
 }
 
 func EndPoint02() http.HandlerFunc {
-	return func(writer http.ResponseWriter, request *http.Request) {
-		//Acessando o banco de dados 'farma' e listando as collections:
+    return func(writer http.ResponseWriter, request *http.Request) {
+        if database.DatabaseConnection == nil {
+            log.Fatal("Erro: conexão com o banco de dados não foi estabelecida")
+        }
+        databaseHandler := database.DatabaseConnection.Database("farma")
+        collection := databaseHandler.Collection("farma_full_collection")
+        cursor, err := collection.Find(context.TODO(), bson.M{})
+        if err != nil {
+            log.Fatal(err)
+        }
 
-		if database.DatabaseConnection == nil {
-			log.Fatal("Erro: conexão com o banco de dados não foi estabelecida")
-		}
-		//Estabelece conexão com o banco de dados 'farma'
-		database := database.DatabaseConnection.Database("farma")
+        var results []models.Drugstore
+        if err = cursor.All(context.TODO(), &results); err != nil {
+            log.Fatal(err)
+        }
 
-		//Printa no terminal os dados da collection 'farma_full_collection'
-		collection := database.Collection("farma_full_collection")
-		cursor, err := collection.Find(context.TODO(), bson.M{})
-		if err != nil {
-			log.Fatal(err)
-		}
+        for _, result := range results {
+            fmt.Println("ID: ", result.ID.Hex())
+            fmt.Println("Nome: ", result.Nome)
+            fmt.Println("Latitude: ", fmt.Sprintf("%f", result.LongLat[0]))
+            fmt.Println("Longitude: ", fmt.Sprintf("%f", result.LongLat[1]))
+            fmt.Println("Nome Fantasia: ", result.NomeFantasia)
+            fmt.Println("Endereço: ")
+            fmt.Println("\tRua: ", result.Endereco.Rua)
+            fmt.Println("\tNúmero: ", result.Endereco.Numero)
+            fmt.Println("\tBairro: ", result.Endereco.Bairro)
+            fmt.Println("\tMunicípio: ", result.Endereco.Municipio)
+            fmt.Println("\tEstado: ", result.Endereco.Estado)
+            fmt.Println("-----------------------------")
+        }
+    }
+}
 
-		var results []models.Drugstore
-		if err = cursor.All(context.TODO(), &results); err != nil {
-			log.Fatal(err)
-		}
+func EndPoint03() http.HandlerFunc {
+    return func(writer http.ResponseWriter, request *http.Request) {
+        vars := mux.Vars(request)
+        estado := vars["estado"]
 
-		//log.Println(len(results))
-		for _, result := range results {
-			fmt.Println("ID: ", result.ID.Hex())
-			fmt.Println("Nome: ", result.Nome)
-			fmt.Println("Latitude: ", fmt.Sprintf("%f", result.LongLat[0]))
-			fmt.Println("Longitude: ", fmt.Sprintf("%f", result.LongLat[1]))
-			fmt.Println("Nome Fantasia: ", result.NomeFantasia)
-			fmt.Println("Endereço: ")
-			fmt.Println("\tRua: ", result.Endereco.Rua)
-			fmt.Println("\tNúmero: ", result.Endereco.Numero)
-			fmt.Println("\tBairro: ", result.Endereco.Bairro)
-			fmt.Println("\tMunicípio: ", result.Endereco.Municipio)
-			fmt.Println("\tEstado: ", result.Endereco.Estado)
-			fmt.Println("-----------------------------")
-		}
-	}
+        databaseHandler := database.DatabaseConnection.Database("farma")
+        collection := databaseHandler.Collection("farma_full_collection")
+
+        filter := bson.M{"endereco.estado": estado}
+
+        cursor, err := collection.Find(context.TODO(), filter)
+        if err != nil {
+            http.Error(writer, err.Error(), http.StatusInternalServerError)
+            return
+        }
+        defer cursor.Close(context.TODO())
+
+        var drugstores []models.Drugstore
+
+        for cursor.Next(context.TODO()) {
+            var drugstore models.Drugstore
+            if err := cursor.Decode(&drugstore); err != nil {
+                http.Error(writer, err.Error(), http.StatusInternalServerError)
+                return
+            }
+            drugstores = append(drugstores, drugstore)
+        }
+
+        if err := cursor.Err(); err != nil {
+            http.Error(writer, err.Error(), http.StatusInternalServerError)
+            return
+        }
+
+        if len(drugstores) > 0 {
+            for _, f := range drugstores {
+                fmt.Fprintf(writer, "Nome: %s\nEndereço: %s, %s - %s\n\n", f.Nome, f.Endereco.Rua, f.Endereco.Numero, f.Endereco.Municipio)
+            }
+        } else {
+            fmt.Fprintln(writer, "Nenhuma farmácia encontrada.")
+        }
+    }
 }
