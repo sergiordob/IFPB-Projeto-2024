@@ -1,11 +1,13 @@
 package models
 
-import "go.mongodb.org/mongo-driver/bson/primitive"
-
-type Dados struct {
+import (
+	"go.mongodb.org/mongo-driver/bson/primitive"
+)
+//[]float64
+type Drugstore struct {
 	ID           primitive.ObjectID `bson:"_id"`
 	Nome         string             `bson:"nome"`
-	LongLat      []float64          `bson:"longLat"`
+	LongLat      []float64         `bson:"longLat"`
 	NomeFantasia string             `bson:"nomeFantasia"`
 	Endereco     struct {
 		Rua       string `bson:"rua"`
