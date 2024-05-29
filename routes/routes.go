@@ -9,6 +9,7 @@ func InitializeRoutes() *mux.Router {
     router := mux.NewRouter()
 
     router.HandleFunc("/drugstores/{estado}", controllers.EndPoint03()).Methods("GET")
+    router.HandleFunc("/drugstores/{estado}/{municipio}", controllers.EndPoint04()).Methods("GET")
     router.HandleFunc("/drugstores/", controllers.EndPoint01()).Methods("GET")
     router.HandleFunc("/teste/", controllers.EndPoint02()).Methods("GET")
 

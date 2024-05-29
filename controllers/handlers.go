@@ -130,3 +130,49 @@ func EndPoint03() http.HandlerFunc {
         }
     }
 }
+func EndPoint04() http.HandlerFunc {
+    return func(writer http.ResponseWriter, request *http.Request) {
+        vars := mux.Vars(request)
+        estado := vars["estado"]
+        municipio := vars["municipio"]
+
+        databaseHandler := database.DatabaseConnection.Database("farma")
+        collection := databaseHandler.Collection("farma_full_collection")
+
+        filter := bson.M{
+            "endereco.estado":    estado,
+            "endereco.municipio": municipio,
+        }
+
+        cursor, err := collection.Find(context.TODO(), filter)
+        if err != nil {
+            http.Error(writer, err.Error(), http.StatusInternalServerError)
+            return
+        }
+        defer cursor.Close(context.TODO())
+
+        var drugstores []models.Drugstore
+
+        for cursor.Next(context.TODO()) {
+            var drugstore models.Drugstore
+            if err := cursor.Decode(&drugstore); err != nil {
+                http.Error(writer, err.Error(), http.StatusInternalServerError)
+                return
+            }
+            drugstores = append(drugstores, drugstore)
+        }
+
+        if err := cursor.Err(); err != nil {
+            http.Error(writer, err.Error(), http.StatusInternalServerError)
+            return
+        }
+
+        if len(drugstores) > 0 {
+            for _, f := range drugstores {
+                fmt.Fprintf(writer, "Nome: %s\nEndereço: %s, %s - %s\n\n", f.Nome, f.Endereco.Rua, f.Endereco.Numero, f.Endereco.Municipio)
+            }
+        } else {
+            fmt.Fprintln(writer, "Nenhuma farmácia encontrada.")
+        }
+    }
+}
